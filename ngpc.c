@@ -67,7 +67,11 @@
  #include <stdlib.h>
  #include <ctype.h>
  #include <signal.h>
- #include <asm/io.h>
+ //#include <asm/io.h>
+ #include <x86_64-linux-gnu/sys/io.h>
+ #include <unistd.h>
+ #include <sys/types.h>
+
  #define outportb(p,v)  outb(v,p)
  #define inportb(p)   inb(p)
  #define getch getchar

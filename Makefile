@@ -11,7 +11,7 @@ LNK     = gcc
 AFLAGS  = -c -Wall
 
 LFLAGS  = -s
-CFLAGS  = -c -m486 -Wall -fomit-frame-pointer -O2 -Wno-parentheses
+CFLAGS  = -c -Wall -fomit-frame-pointer -O2 -Wno-parentheses
 OBJECTS = ngpc.o
 
 %.o : %.c
