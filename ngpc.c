@@ -2,8 +2,12 @@
 // ngpc.c                                                                   //
 //////////////////////////////////////////////////////////////////////////////
 
-#define POKELINK "PokeLink v1.01j1"
-//
+#define POKELINK "PokeLink v1.01j2"
+
+// v1.01j2
+//      Jeff modified to work on linux. You must be root
+//      to run the linux version.
+//      To compile on linux use: cc -o ngpc ngpc.c -O2 -Wl,-s
 // v1.01j1
 //      Jeff modified to work on win95/98.
 //      Compiled with DJGPP.
@@ -51,22 +55,36 @@
 // includes                                                                 //
 //////////////////////////////////////////////////////////////////////////////
 
-
-//#include <windows.h>
-#include <stdio.h>
-#include <conio.h>
-#include <stdlib.h>
-#include <ctype.h>
-//#include <conio.h>
-
-//#include <crt0.h>
-//#include <go32.h>
-//#include <pc.h>
-//#include <string.h>
-//#include <signal.h>
-#include <dos.h>                        // needed for inportb,outportb
-//#include <dpmi.h>
-
+#ifdef DJGPP
+ #include <stdio.h>
+ #include <conio.h>
+ #include <stdlib.h>
+ #include <ctype.h>
+ #include <dos.h>                        // needed for inportb,outportb
+#elif __linux__
+ #include <stdio.h>
+// #include <conio.h>
+ #include <stdlib.h>
+ #include <ctype.h>
+ #include <signal.h>
+ #include <asm/io.h>
+ #define outportb(p,v)  outb(v,p)
+ #define inportb(p)   inb(p)
+ #define getch getchar
+#else
+// #include <windows.h>
+ #include <stdio.h>
+ #include <conio.h>
+ #include <stdlib.h>
+ #include <ctype.h>
+// #include <conio.h>
+// #include <crt0.h>
+// #include <go32.h>
+// #include <pc.h>
+// #include <string.h>
+// #include <signal.h>
+ #include <dpmi.h>
+#endif
 
 
 void DeInitGBX();
@@ -118,6 +136,20 @@ unsigned int port = 0x378;
 char *filename = 0;
 int options = 0;
 int err = 0;
+
+#ifdef __linux__
+static int mbquit = 0;
+
+void control_c(int n)
+   {
+   mbquit = 1;
+   }
+
+int kbhit(void)
+   {
+   return mbquit;
+   }
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 // PauseOnError                                                             //
@@ -604,6 +636,16 @@ int ActionWrite()
 	return 0;
 }
 
+#ifdef __linux__
+void *old = NULL;
+
+void clear_sig(void)
+   {
+   if (old)
+      signal(SIGINT, old);
+   }
+#endif
+
 //////////////////////////////////////////////////////////////////////////////
 // main                                                                     //
 //////////////////////////////////////////////////////////////////////////////
@@ -613,7 +655,7 @@ int main(int argc, char **argv)  //*argv[])
 
 	// title
     printf(POKELINK" by Dark Fader / BlackThunder\n");
-    printf("  Modified for win95/98 by Jeff Frohwein.\n");
+    printf("  Modified for win95/98/linux by Jeff Frohwein.\n");
     printf("  This version might not work on Win2000 or NT.\n\n");
 
 	// parse command line
@@ -671,7 +713,22 @@ int main(int argc, char **argv)  //*argv[])
 		}
 	}
 
-	// environment settings
+#ifdef __linux__
+    atexit(clear_sig);
+    old = signal(SIGINT, control_c);
+    if (getuid() && geteuid()) {
+        printf("ERROR: No privileges to use I/O\n");
+        exit(1);
+    }
+    ioperm(port, 5, 1);
+    if (getgid() && !getegid()) {
+        setegid(getgid());
+    }
+    if (getuid() && !geteuid()) {
+        seteuid(getuid());
+    }
+#else
+    // environment settings
 	if (getenv("GBXPORT"))
 	{
 		port = strtoul(getenv("GBXPORT"), NULL, 10);
@@ -680,7 +737,9 @@ int main(int argc, char **argv)  //*argv[])
 	// Init GiveIO
 //    if (InitGiveIO()) { printf("GiveIO driver could not be opened!\n"); return err=1; }
 
-	// Check for Flash Linker at {GBXPORT} or 0x378
+#endif
+
+    // Check for Flash Linker at {GBXPORT} or 0x378
 	if (InitGBX()) { printf("Flash Linker could not be found at port 0x%3X!\nPlease check the connection and that it's turned on.\n", port); return err=1; }
 //    atexit(DeInitGBX);
 
@@ -699,7 +758,11 @@ int main(int argc, char **argv)  //*argv[])
     if (options & OPTION_VERIFY)
        if (ActionVerify()) return err=1;
 
+printf("[4]\n");
+
     DeInitGBX();
+
+printf("[5]\n");
 
 	return 0;
 }
