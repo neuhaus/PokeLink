@@ -1,4 +1,4 @@
-# PokeLinker
+# PokeLink
 
 A tool to flash NGPC ROMs to a flash cart using the Pocket Linker.
 The Pocket Linker is a parallel port device made by Bung (aka UFO, Mr. Flash).
